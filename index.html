@@ -350,7 +350,24 @@ function render(){
 
   document.getElementById("list").innerHTML=html;
 }
+function handleIncomingLink(){
+  const params = new URLSearchParams(window.location.search);
+  const incoming = params.get("add");
 
+  if(incoming){
+    const decoded = decodeURIComponent(incoming);
+
+    const linkBox = document.getElementById("link") || document.getElementById("url");
+
+    if(linkBox){
+      linkBox.value = decoded;
+    }
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+handleIncomingLink();
 render();
 </script>
 
