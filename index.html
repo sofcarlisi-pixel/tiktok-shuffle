@@ -15,10 +15,8 @@ body{
   margin:auto;
   padding:20px;
 }
-
 h1{text-align:center;margin-bottom:4px;}
 .subtitle{text-align:center;color:#aaa;margin-top:0;}
-
 .card{
   background:#17171f;
   border:1px solid #2a2a35;
@@ -26,7 +24,6 @@ h1{text-align:center;margin-bottom:4px;}
   padding:16px;
   margin-top:16px;
 }
-
 input,select,textarea{
   width:100%;
   padding:13px;
@@ -38,9 +35,7 @@ input,select,textarea{
   font-size:16px;
   box-sizing:border-box;
 }
-
 textarea{resize:vertical;min-height:70px;}
-
 button{
   width:100%;
   padding:14px;
@@ -51,18 +46,15 @@ button{
   font-weight:700;
   cursor:pointer;
 }
-
 .add{background:#ff2d55;color:white;}
 .shuffle{background:#25F4EE;color:black;}
 .secondary{background:#292933;color:white;}
 .delete{background:#40202a;color:#ffb6c8;}
-
 .row{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:8px;
 }
-
 .stats{
   display:flex;
   justify-content:space-between;
@@ -70,13 +62,11 @@ button{
   font-size:14px;
   margin-top:12px;
 }
-
-#list{
+#library,#queue{
   max-height:430px;
   overflow-y:auto;
   margin-top:12px;
 }
-
 .item{
   background:#101014;
   border:1px solid #2a2a35;
@@ -84,20 +74,17 @@ button{
   padding:13px;
   margin-bottom:12px;
 }
-
 .item a{
   color:#25F4EE;
   text-decoration:none;
   word-break:break-word;
 }
-
 .meta{
   color:#bbb;
   font-size:14px;
   line-height:1.5;
   margin-top:8px;
 }
-
 .badge{
   display:inline-block;
   background:#262633;
@@ -106,7 +93,6 @@ button{
   margin:4px 4px 0 0;
   font-size:13px;
 }
-
 .smallBtn{
   font-size:14px;
   padding:10px;
@@ -117,40 +103,26 @@ button{
 <body>
 
 <h1>🎲 TikTok Shuffle</h1>
-<p class="subtitle">Browse edits by artist, song, mood, or random inspiration.</p>
+<p class="subtitle">Save edits, then generate a shuffled watch queue.</p>
 
 <div class="card">
   <input id="url" placeholder="Paste TikTok link">
 
   <input id="artist" placeholder="Artist e.g. Lana Del Rey">
   <input id="song" placeholder="Song e.g. Margaret">
+  <input id="fandom" placeholder="Fandom e.g. The Hunger Games">
 
   <select id="mood">
     <option value="">Choose a mood</option>
-    <option>Dreamy</option>
-    <option>Nostalgic</option>
-    <option>Cinematic</option>
-    <option>Romantic</option>
     <option>Sad</option>
-    <option>Dark</option>
-    <option>Chaotic</option>
-    <option>Summer</option>
-    <option>Soft</option>
-    <option>Vintage</option>
-    <option>Luxury</option>
-    <option>Funny</option>
-    <option>Fast Pace</option>
+    <option>Aura</option>
+    <option>Ship</option>
+    <option>Nostalgic</option>
   </select>
 
-  <textarea id="note" placeholder="Optional note: love the transition, timing, color, etc."></textarea>
+  <textarea id="note" placeholder="Optional note"></textarea>
 
   <button class="add" onclick="addEdit()">Add Edit</button>
-  <button class="shuffle" onclick="shuffleAll()">Shuffle Everything</button>
-
-  <div class="row">
-    <button class="secondary" onclick="shuffleFavorites()">Shuffle Favorites</button>
-    <button class="delete" onclick="clearAll()">Clear All</button>
-  </div>
 
   <div class="stats">
     <span id="count">0 edits</span>
@@ -159,18 +131,31 @@ button{
 </div>
 
 <div class="card">
-  <input id="search" placeholder="Search artist, song, mood, note, or URL" oninput="render()">
+  <h2>🎲 Shuffle Queue</h2>
 
-  <div class="row">
-    <button class="secondary" onclick="shuffleByArtist()">Shuffle by Artist</button>
-    <button class="secondary" onclick="shuffleByMood()">Shuffle by Mood</button>
-  </div>
+  <select id="queueSize">
+    <option value="10">Shuffle 10 edits</option>
+    <option value="20">Shuffle 20 edits</option>
+    <option value="30">Shuffle 30 edits</option>
+    <option value="50">Shuffle 50 edits</option>
+    <option value="all">Shuffle all edits</option>
+  </select>
 
-  <div id="list"></div>
+  <button class="shuffle" onclick="generateQueue()">Generate Shuffle Queue</button>
+  <button class="secondary" onclick="clearQueue()">Clear Queue</button>
+
+  <div id="queue"></div>
+</div>
+
+<div class="card">
+  <h2>📚 Library</h2>
+  <input id="search" placeholder="Search artist, song, fandom, mood, note, or URL" oninput="renderLibrary()">
+  <div id="library"></div>
 </div>
 
 <script>
-const STORAGE="tiktok_shuffle_artist_mood_v1";
+const STORAGE="tiktok_shuffle_artist_mood_fandom_v1";
+let currentQueue=[];
 
 function getEdits(){
   return JSON.parse(localStorage.getItem(STORAGE) || "[]");
@@ -178,13 +163,14 @@ function getEdits(){
 
 function saveEdits(edits){
   localStorage.setItem(STORAGE, JSON.stringify(edits));
-  render();
+  renderLibrary();
 }
 
 function addEdit(){
   const url=document.getElementById("url").value.trim();
   const artist=document.getElementById("artist").value.trim();
   const song=document.getElementById("song").value.trim();
+  const fandom=document.getElementById("fandom").value.trim();
   const mood=document.getElementById("mood").value.trim();
   const note=document.getElementById("note").value.trim();
 
@@ -209,6 +195,7 @@ function addEdit(){
     url,
     artist,
     song,
+    fandom,
     mood,
     note,
     favorite:false,
@@ -221,6 +208,7 @@ function addEdit(){
   document.getElementById("url").value="";
   document.getElementById("artist").value="";
   document.getElementById("song").value="";
+  document.getElementById("fandom").value="";
   document.getElementById("mood").value="";
   document.getElementById("note").value="";
 }
@@ -229,75 +217,99 @@ function openEdit(index){
   let edits=getEdits();
   edits[index].views++;
   saveEdits(edits);
-  window.location.href=edits[index].url;
+  window.open(edits[index].url, "_blank");
 }
 
-function shuffleFromIndexes(indexes){
-  if(!indexes.length){
-    alert("No matching edits yet.");
+function shuffleArray(array){
+  let copy=[...array];
+
+  for(let i=copy.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [copy[i],copy[j]]=[copy[j],copy[i]];
+  }
+
+  return copy;
+}
+
+function generateQueue(){
+  const edits=getEdits();
+
+  if(!edits.length){
+    alert("No edits saved yet.");
     return;
   }
 
-  const randomIndex=indexes[Math.floor(Math.random()*indexes.length)];
-  openEdit(randomIndex);
+  const size=document.getElementById("queueSize").value;
+  let indexes=edits.map((e,i)=>i);
+  indexes=shuffleArray(indexes);
+
+  if(size!=="all"){
+    indexes=indexes.slice(0, Number(size));
+  }
+
+  currentQueue=indexes;
+  renderQueue();
 }
 
-function shuffleAll(){
-  const edits=getEdits();
-  shuffleFromIndexes(edits.map((e,i)=>i));
+function clearQueue(){
+  currentQueue=[];
+  renderQueue();
 }
 
-function shuffleFavorites(){
+function renderQueue(){
   const edits=getEdits();
-  shuffleFromIndexes(
-    edits.map((e,i)=>e.favorite ? i : null).filter(i=>i!==null)
-  );
-}
+  const box=document.getElementById("queue");
 
-function shuffleByArtist(){
-  const artist=prompt("Which artist?");
-  if(!artist)return;
+  if(!currentQueue.length){
+    box.innerHTML="<p class='subtitle'>No queue yet. Generate one above.</p>";
+    return;
+  }
 
-  const edits=getEdits();
-  const matches=edits
-    .map((e,i)=>e.artist.toLowerCase()===artist.toLowerCase() ? i : null)
-    .filter(i=>i!==null);
+  let html="";
 
-  shuffleFromIndexes(matches);
-}
+  currentQueue.forEach((editIndex,position)=>{
+    const e=edits[editIndex];
 
-function shuffleByMood(){
-  const mood=prompt("Which mood? Example: Dreamy, Nostalgic, Cinematic");
-  if(!mood)return;
+    html+=`
+      <div class="item">
+        <strong>#${position+1}</strong>
 
-  const edits=getEdits();
-  const matches=edits
-    .map((e,i)=>e.mood.toLowerCase()===mood.toLowerCase() ? i : null)
-    .filter(i=>i!==null);
+        <div class="meta">
+          ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
+          ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
+          ${e.fandom ? `<span class="badge">📺 ${e.fandom}</span>` : ""}
+          ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
+          ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
 
-  shuffleFromIndexes(matches);
+          <br><br>
+          ${e.note ? `✍️ ${e.note}<br>` : ""}
+          Viewed: ${e.views}
+        </div>
+
+        <button class="shuffle smallBtn" onclick="openEdit(${editIndex})">Open This Edit</button>
+      </div>
+    `;
+  });
+
+  box.innerHTML=html;
 }
 
 function toggleFavorite(index){
   let edits=getEdits();
   edits[index].favorite=!edits[index].favorite;
   saveEdits(edits);
+  renderQueue();
 }
 
 function deleteEdit(index){
   let edits=getEdits();
   edits.splice(index,1);
   saveEdits(edits);
+  currentQueue=[];
+  renderQueue();
 }
 
-function clearAll(){
-  if(confirm("Delete all saved edits?")){
-    localStorage.removeItem(STORAGE);
-    render();
-  }
-}
-
-function render(){
+function renderLibrary(){
   const edits=getEdits();
   const query=document.getElementById("search").value.toLowerCase();
 
@@ -310,6 +322,7 @@ function render(){
       e.url.toLowerCase().includes(query) ||
       e.artist.toLowerCase().includes(query) ||
       e.song.toLowerCase().includes(query) ||
+      e.fandom.toLowerCase().includes(query) ||
       e.mood.toLowerCase().includes(query) ||
       e.note.toLowerCase().includes(query)
     );
@@ -328,6 +341,7 @@ function render(){
         <div class="meta">
           ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
           ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
+          ${e.fandom ? `<span class="badge">📺 ${e.fandom}</span>` : ""}
           ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
           ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
 
@@ -348,27 +362,23 @@ function render(){
     `;
   });
 
-  document.getElementById("list").innerHTML=html;
+  document.getElementById("library").innerHTML=html;
 }
+
 function handleIncomingLink(){
   const params = new URLSearchParams(window.location.search);
   const incoming = params.get("add");
 
   if(incoming){
     const decoded = decodeURIComponent(incoming);
-
-    const linkBox = document.getElementById("link") || document.getElementById("url");
-
-    if(linkBox){
-      linkBox.value = decoded;
-    }
-
+    document.getElementById("url").value = decoded;
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 
 handleIncomingLink();
-render();
+renderLibrary();
+renderQueue();
 </script>
 
 </body>
