@@ -11,32 +11,35 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
   background:#0f0f12;
   color:white;
-  max-width:700px;
+  max-width:760px;
   margin:auto;
-  padding:22px;
+  padding:20px;
 }
 
-h1{
-  text-align:center;
-  margin-bottom:6px;
+h1{text-align:center;margin-bottom:4px;}
+.subtitle{text-align:center;color:#aaa;margin-top:0;}
+
+.card{
+  background:#17171f;
+  border:1px solid #2a2a35;
+  border-radius:22px;
+  padding:16px;
+  margin-top:16px;
 }
 
-p{
-  text-align:center;
-  color:#aaa;
-}
-
-input,select{
+input,select,textarea{
   width:100%;
-  padding:14px;
-  font-size:16px;
+  padding:13px;
+  margin:7px 0;
   border-radius:14px;
   border:1px solid #333;
-  background:#1b1b22;
+  background:#1f1f28;
   color:white;
+  font-size:16px;
   box-sizing:border-box;
-  margin:8px 0;
 }
+
+textarea{resize:vertical;min-height:70px;}
 
 button{
   width:100%;
@@ -52,41 +55,7 @@ button{
 .add{background:#ff2d55;color:white;}
 .shuffle{background:#25F4EE;color:black;}
 .secondary{background:#292933;color:white;}
-.delete{background:#3a1f27;color:#ffb6c8;}
-
-.card{
-  background:#17171d;
-  border:1px solid #2a2a33;
-  border-radius:22px;
-  padding:16px;
-  margin-top:16px;
-}
-
-#list{
-  max-height:390px;
-  overflow-y:auto;
-  margin-top:12px;
-}
-
-.item{
-  padding:12px;
-  border:1px solid #2a2a33;
-  border-radius:16px;
-  margin-bottom:10px;
-  background:#101014;
-}
-
-.item a{
-  color:#25F4EE;
-  word-break:break-word;
-  text-decoration:none;
-}
-
-.meta{
-  color:#aaa;
-  font-size:13px;
-  margin-top:6px;
-}
+.delete{background:#40202a;color:#ffb6c8;}
 
 .row{
   display:grid;
@@ -94,17 +63,53 @@ button{
   gap:8px;
 }
 
-.smallBtn{
-  padding:10px;
-  font-size:14px;
-}
-
 .stats{
   display:flex;
   justify-content:space-between;
   color:#aaa;
   font-size:14px;
-  margin-top:10px;
+  margin-top:12px;
+}
+
+#list{
+  max-height:430px;
+  overflow-y:auto;
+  margin-top:12px;
+}
+
+.item{
+  background:#101014;
+  border:1px solid #2a2a35;
+  border-radius:18px;
+  padding:13px;
+  margin-bottom:12px;
+}
+
+.item a{
+  color:#25F4EE;
+  text-decoration:none;
+  word-break:break-word;
+}
+
+.meta{
+  color:#bbb;
+  font-size:14px;
+  line-height:1.5;
+  margin-top:8px;
+}
+
+.badge{
+  display:inline-block;
+  background:#262633;
+  border-radius:999px;
+  padding:5px 9px;
+  margin:4px 4px 0 0;
+  font-size:13px;
+}
+
+.smallBtn{
+  font-size:14px;
+  padding:10px;
 }
 </style>
 </head>
@@ -112,14 +117,35 @@ button{
 <body>
 
 <h1>🎲 TikTok Shuffle</h1>
-<p>Your editing inspo library</p>
+<p class="subtitle">Browse edits by artist, song, mood, or random inspiration.</p>
 
 <div class="card">
-  <input id="link" placeholder="Paste TikTok link here">
-  <input id="note" placeholder="Optional note: transition, audio, text, etc.">
+  <input id="url" placeholder="Paste TikTok link">
 
-  <button class="add" onclick="addLink()">Add Edit</button>
-  <button class="shuffle" onclick="shuffleAll()">Shuffle All</button>
+  <input id="artist" placeholder="Artist e.g. Lana Del Rey">
+  <input id="song" placeholder="Song e.g. Margaret">
+
+  <select id="mood">
+    <option value="">Choose a mood</option>
+    <option>Dreamy</option>
+    <option>Nostalgic</option>
+    <option>Cinematic</option>
+    <option>Romantic</option>
+    <option>Sad</option>
+    <option>Dark</option>
+    <option>Chaotic</option>
+    <option>Summer</option>
+    <option>Soft</option>
+    <option>Vintage</option>
+    <option>Luxury</option>
+    <option>Funny</option>
+    <option>Fast Pace</option>
+  </select>
+
+  <textarea id="note" placeholder="Optional note: love the transition, timing, color, etc."></textarea>
+
+  <button class="add" onclick="addEdit()">Add Edit</button>
+  <button class="shuffle" onclick="shuffleAll()">Shuffle Everything</button>
 
   <div class="row">
     <button class="secondary" onclick="shuffleFavorites()">Shuffle Favorites</button>
@@ -127,31 +153,40 @@ button{
   </div>
 
   <div class="stats">
-    <span id="count">0 saved</span>
+    <span id="count">0 edits</span>
     <span id="favCount">0 favorites</span>
   </div>
 </div>
 
 <div class="card">
-  <input id="search" placeholder="Search links or notes" oninput="render()">
+  <input id="search" placeholder="Search artist, song, mood, note, or URL" oninput="render()">
+
+  <div class="row">
+    <button class="secondary" onclick="shuffleByArtist()">Shuffle by Artist</button>
+    <button class="secondary" onclick="shuffleByMood()">Shuffle by Mood</button>
+  </div>
+
   <div id="list"></div>
 </div>
 
 <script>
-const STORAGE="tiktok_shuffle_v3";
+const STORAGE="tiktok_shuffle_artist_mood_v1";
 
-function getLinks(){
+function getEdits(){
   return JSON.parse(localStorage.getItem(STORAGE) || "[]");
 }
 
-function saveLinks(arr){
-  localStorage.setItem(STORAGE,JSON.stringify(arr));
+function saveEdits(edits){
+  localStorage.setItem(STORAGE, JSON.stringify(edits));
   render();
 }
 
-function addLink(){
-  let url=document.getElementById("link").value.trim();
-  let note=document.getElementById("note").value.trim();
+function addEdit(){
+  const url=document.getElementById("url").value.trim();
+  const artist=document.getElementById("artist").value.trim();
+  const song=document.getElementById("song").value.trim();
+  const mood=document.getElementById("mood").value.trim();
+  const note=document.getElementById("note").value.trim();
 
   if(!url){
     alert("Paste a TikTok link first.");
@@ -163,117 +198,152 @@ function addLink(){
     return;
   }
 
-  let links=getLinks();
+  let edits=getEdits();
 
-  if(links.some(x=>x.url===url)){
-    alert("Already saved!");
+  if(edits.some(e=>e.url===url)){
+    alert("Already saved.");
     return;
   }
 
-  links.unshift({
-    url:url,
-    note:note,
+  edits.unshift({
+    url,
+    artist,
+    song,
+    mood,
+    note,
     favorite:false,
     views:0,
     added:new Date().toLocaleDateString()
   });
 
-  saveLinks(links);
+  saveEdits(edits);
 
-  document.getElementById("link").value="";
+  document.getElementById("url").value="";
+  document.getElementById("artist").value="";
+  document.getElementById("song").value="";
+  document.getElementById("mood").value="";
   document.getElementById("note").value="";
 }
 
-function openLink(index){
-  let links=getLinks();
-  links[index].views++;
-  saveLinks(links);
-  window.location.href=links[index].url;
+function openEdit(index){
+  let edits=getEdits();
+  edits[index].views++;
+  saveEdits(edits);
+  window.location.href=edits[index].url;
+}
+
+function shuffleFromIndexes(indexes){
+  if(!indexes.length){
+    alert("No matching edits yet.");
+    return;
+  }
+
+  const randomIndex=indexes[Math.floor(Math.random()*indexes.length)];
+  openEdit(randomIndex);
 }
 
 function shuffleAll(){
-  let links=getLinks();
-
-  if(!links.length){
-    alert("No TikToks saved.");
-    return;
-  }
-
-  let index=Math.floor(Math.random()*links.length);
-  openLink(index);
+  const edits=getEdits();
+  shuffleFromIndexes(edits.map((e,i)=>i));
 }
 
 function shuffleFavorites(){
-  let links=getLinks();
-  let favorites=links
-    .map((x,i)=>x.favorite ? i : null)
-    .filter(x=>x!==null);
+  const edits=getEdits();
+  shuffleFromIndexes(
+    edits.map((e,i)=>e.favorite ? i : null).filter(i=>i!==null)
+  );
+}
 
-  if(!favorites.length){
-    alert("No favorites yet.");
-    return;
-  }
+function shuffleByArtist(){
+  const artist=prompt("Which artist?");
+  if(!artist)return;
 
-  let index=favorites[Math.floor(Math.random()*favorites.length)];
-  openLink(index);
+  const edits=getEdits();
+  const matches=edits
+    .map((e,i)=>e.artist.toLowerCase()===artist.toLowerCase() ? i : null)
+    .filter(i=>i!==null);
+
+  shuffleFromIndexes(matches);
+}
+
+function shuffleByMood(){
+  const mood=prompt("Which mood? Example: Dreamy, Nostalgic, Cinematic");
+  if(!mood)return;
+
+  const edits=getEdits();
+  const matches=edits
+    .map((e,i)=>e.mood.toLowerCase()===mood.toLowerCase() ? i : null)
+    .filter(i=>i!==null);
+
+  shuffleFromIndexes(matches);
 }
 
 function toggleFavorite(index){
-  let links=getLinks();
-  links[index].favorite=!links[index].favorite;
-  saveLinks(links);
+  let edits=getEdits();
+  edits[index].favorite=!edits[index].favorite;
+  saveEdits(edits);
 }
 
-function deleteLink(index){
-  let links=getLinks();
-  links.splice(index,1);
-  saveLinks(links);
+function deleteEdit(index){
+  let edits=getEdits();
+  edits.splice(index,1);
+  saveEdits(edits);
 }
 
 function clearAll(){
-  if(confirm("Delete all saved TikToks?")){
+  if(confirm("Delete all saved edits?")){
     localStorage.removeItem(STORAGE);
     render();
   }
 }
 
 function render(){
-  let links=getLinks();
-  let query=document.getElementById("search").value.toLowerCase();
+  const edits=getEdits();
+  const query=document.getElementById("search").value.toLowerCase();
 
-  document.getElementById("count").textContent=links.length+" saved";
-  document.getElementById("favCount").textContent=links.filter(x=>x.favorite).length+" favorites";
+  document.getElementById("count").textContent=edits.length+" edits";
+  document.getElementById("favCount").textContent=edits.filter(e=>e.favorite).length+" favorites";
 
-  let filtered=links
-    .map((x,i)=>({x,i}))
-    .filter(obj=>
-      obj.x.url.toLowerCase().includes(query) ||
-      obj.x.note.toLowerCase().includes(query)
+  const filtered=edits
+    .map((e,i)=>({e,i}))
+    .filter(({e})=>
+      e.url.toLowerCase().includes(query) ||
+      e.artist.toLowerCase().includes(query) ||
+      e.song.toLowerCase().includes(query) ||
+      e.mood.toLowerCase().includes(query) ||
+      e.note.toLowerCase().includes(query)
     );
 
   let html="";
 
   if(!filtered.length){
-    html="<p>No saved edits yet.</p>";
+    html="<p class='subtitle'>No edits saved here yet.</p>";
   }
 
-  filtered.forEach(({x,i})=>{
+  filtered.forEach(({e,i})=>{
     html+=`
       <div class="item">
-        <a href="${x.url}" target="_blank">${x.url}</a>
+        <a href="${e.url}" target="_blank">${e.url}</a>
+
         <div class="meta">
-          ${x.note ? "Note: "+x.note+"<br>" : ""}
-          Added: ${x.added} · Viewed: ${x.views}
+          ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
+          ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
+          ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
+          ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
+
+          <br><br>
+          ${e.note ? `✍️ ${e.note}<br>` : ""}
+          Added: ${e.added} · Viewed: ${e.views}
         </div>
 
         <div class="row">
-          <button class="secondary smallBtn" onclick="openLink(${i})">Open</button>
+          <button class="secondary smallBtn" onclick="openEdit(${i})">Open</button>
           <button class="secondary smallBtn" onclick="toggleFavorite(${i})">
-            ${x.favorite ? "★ Favorited" : "☆ Favorite"}
+            ${e.favorite ? "★ Unfavorite" : "☆ Favorite"}
           </button>
         </div>
 
-        <button class="delete smallBtn" onclick="deleteLink(${i})">Delete</button>
+        <button class="delete smallBtn" onclick="deleteEdit(${i})">Delete</button>
       </div>
     `;
   });
