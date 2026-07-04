@@ -1,2 +1,2 @@
 # tiktok-shuffle
-My TikTok editing inspiration app
+My TikTok editing inspiration app.
