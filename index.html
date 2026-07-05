@@ -4,110 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TikTok Shuffle</title>
-
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  background:#0f0f12;
-  color:white;
-  max-width:760px;
-  margin:auto;
-  padding:20px;
-}
-h1{text-align:center;margin-bottom:4px;}
-.subtitle{text-align:center;color:#aaa;margin-top:0;}
-.card{
-  background:#17171f;
-  border:1px solid #2a2a35;
-  border-radius:22px;
-  padding:16px;
-  margin-top:16px;
-}
-input,select,textarea{
-  width:100%;
-  padding:13px;
-  margin:7px 0;
-  border-radius:14px;
-  border:1px solid #333;
-  background:#1f1f28;
-  color:white;
-  font-size:16px;
-  box-sizing:border-box;
-}
-textarea{resize:vertical;min-height:70px;}
-button{
-  width:100%;
-  padding:14px;
-  margin-top:8px;
-  border:none;
-  border-radius:14px;
-  font-size:16px;
-  font-weight:700;
-  cursor:pointer;
-}
-.add{background:#ff2d55;color:white;}
-.shuffle{background:#25F4EE;color:black;}
-.secondary{background:#292933;color:white;}
-.delete{background:#40202a;color:#ffb6c8;}
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-}
-.stats{
-  display:flex;
-  justify-content:space-between;
-  color:#aaa;
-  font-size:14px;
-  margin-top:12px;
-}
-#library,#queue{
-  max-height:430px;
-  overflow-y:auto;
-  margin-top:12px;
-}
-.item{
-  background:#101014;
-  border:1px solid #2a2a35;
-  border-radius:18px;
-  padding:13px;
-  margin-bottom:12px;
-}
-.item a{
-  color:#25F4EE;
-  text-decoration:none;
-  word-break:break-word;
-}
-.meta{
-  color:#bbb;
-  font-size:14px;
-  line-height:1.5;
-  margin-top:8px;
-}
-.badge{
-  display:inline-block;
-  background:#262633;
-  border-radius:999px;
-  padding:5px 9px;
-  margin:4px 4px 0 0;
-  font-size:13px;
-}
-.smallBtn{
-  font-size:14px;
-  padding:10px;
-}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#0f0f12;color:white;max-width:760px;margin:auto;padding:20px}
+h1{text-align:center;margin-bottom:4px}.subtitle{text-align:center;color:#aaa;margin-top:0}
+.card{background:#17171f;border:1px solid #2a2a35;border-radius:22px;padding:16px;margin-top:16px}
+input,select,textarea{width:100%;padding:13px;margin:7px 0;border-radius:14px;border:1px solid #333;background:#1f1f28;color:white;font-size:16px;box-sizing:border-box}
+textarea{resize:vertical;min-height:70px}
+button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer}
+.add{background:#ff2d55;color:white}.shuffle{background:#25F4EE;color:black}.secondary{background:#292933;color:white}.delete{background:#40202a;color:#ffb6c8}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stats{display:flex;justify-content:space-between;color:#aaa;font-size:14px;margin-top:12px}
+#library,#queue{max-height:360px;overflow-y:auto;margin-top:12px}
+.item{background:#101014;border:1px solid #2a2a35;border-radius:18px;padding:13px;margin-bottom:12px}
+.item a{color:#25F4EE;text-decoration:none;word-break:break-word}.meta{color:#bbb;font-size:14px;line-height:1.5;margin-top:8px}
+.badge{display:inline-block;background:#262633;border-radius:999px;padding:5px 9px;margin:4px 4px 0 0;font-size:13px}
+.smallBtn{font-size:14px;padding:10px}
+.player{border:1px solid #25F4EE}
+.bigNumber{text-align:center;font-size:34px;font-weight:800;margin:8px 0}
 </style>
 </head>
-
 <body>
 
 <h1>🎲 TikTok Shuffle</h1>
-<p class="subtitle">Save edits, then generate a shuffled watch queue.</p>
+<p class="subtitle">Save edits, shuffle a queue, then binge through it.</p>
 
 <div class="card">
   <input id="url" placeholder="Paste TikTok link">
-
   <input id="artist" placeholder="Artist e.g. Lana Del Rey">
   <input id="song" placeholder="Song e.g. Margaret">
   <input id="fandom" placeholder="Fandom e.g. The Hunger Games">
@@ -121,7 +43,6 @@ button{
   </select>
 
   <textarea id="note" placeholder="Optional note"></textarea>
-
   <button class="add" onclick="addEdit()">Add Edit</button>
 
   <div class="stats">
@@ -142,9 +63,15 @@ button{
   </select>
 
   <button class="shuffle" onclick="generateQueue()">Generate Shuffle Queue</button>
+  <button class="secondary" onclick="startPlayer()">Start Queue Player</button>
   <button class="secondary" onclick="clearQueue()">Clear Queue</button>
 
   <div id="queue"></div>
+</div>
+
+<div class="card player">
+  <h2>▶ Queue Player</h2>
+  <div id="playerBox"></div>
 </div>
 
 <div class="card">
@@ -155,15 +82,24 @@ button{
 
 <script>
 const STORAGE="tiktok_shuffle_artist_mood_fandom_v1";
-let currentQueue=[];
+const QUEUE_STORAGE="tiktok_shuffle_queue_v1";
+const POSITION_STORAGE="tiktok_shuffle_position_v1";
 
-function getEdits(){
-  return JSON.parse(localStorage.getItem(STORAGE) || "[]");
-}
+let currentQueue=JSON.parse(localStorage.getItem(QUEUE_STORAGE) || "[]");
+let currentPosition=Number(localStorage.getItem(POSITION_STORAGE) || 0);
+
+function getEdits(){return JSON.parse(localStorage.getItem(STORAGE) || "[]");}
 
 function saveEdits(edits){
   localStorage.setItem(STORAGE, JSON.stringify(edits));
   renderLibrary();
+  renderQueue();
+  renderPlayer();
+}
+
+function saveQueue(){
+  localStorage.setItem(QUEUE_STORAGE, JSON.stringify(currentQueue));
+  localStorage.setItem(POSITION_STORAGE, String(currentPosition));
 }
 
 function addEdit(){
@@ -174,35 +110,13 @@ function addEdit(){
   const mood=document.getElementById("mood").value.trim();
   const note=document.getElementById("note").value.trim();
 
-  if(!url){
-    alert("Paste a TikTok link first.");
-    return;
-  }
-
-  if(!url.toLowerCase().includes("tiktok")){
-    alert("That does not look like a TikTok link.");
-    return;
-  }
+  if(!url){alert("Paste a TikTok link first.");return;}
+  if(!url.toLowerCase().includes("tiktok")){alert("That does not look like a TikTok link.");return;}
 
   let edits=getEdits();
+  if(edits.some(e=>e.url===url)){alert("Already saved.");return;}
 
-  if(edits.some(e=>e.url===url)){
-    alert("Already saved.");
-    return;
-  }
-
-  edits.unshift({
-    url,
-    artist,
-    song,
-    fandom,
-    mood,
-    note,
-    favorite:false,
-    views:0,
-    added:new Date().toLocaleDateString()
-  });
-
+  edits.unshift({url,artist,song,fandom,mood,note,favorite:false,views:0,added:new Date().toLocaleDateString()});
   saveEdits(edits);
 
   document.getElementById("url").value="";
@@ -213,47 +127,119 @@ function addEdit(){
   document.getElementById("note").value="";
 }
 
-function openEdit(index){
-  let edits=getEdits();
-  edits[index].views++;
-  saveEdits(edits);
-  window.open(edits[index].url, "_blank");
-}
-
 function shuffleArray(array){
   let copy=[...array];
-
   for(let i=copy.length-1;i>0;i--){
     let j=Math.floor(Math.random()*(i+1));
     [copy[i],copy[j]]=[copy[j],copy[i]];
   }
-
   return copy;
 }
 
 function generateQueue(){
   const edits=getEdits();
-
-  if(!edits.length){
-    alert("No edits saved yet.");
-    return;
-  }
+  if(!edits.length){alert("No edits saved yet.");return;}
 
   const size=document.getElementById("queueSize").value;
-  let indexes=edits.map((e,i)=>i);
-  indexes=shuffleArray(indexes);
-
-  if(size!=="all"){
-    indexes=indexes.slice(0, Number(size));
-  }
+  let indexes=shuffleArray(edits.map((e,i)=>i));
+  if(size!=="all") indexes=indexes.slice(0, Number(size));
 
   currentQueue=indexes;
+  currentPosition=0;
+  saveQueue();
   renderQueue();
+  renderPlayer();
+}
+
+function startPlayer(){
+  if(!currentQueue.length){generateQueue();}
+  currentPosition=0;
+  saveQueue();
+  renderPlayer();
 }
 
 function clearQueue(){
   currentQueue=[];
+  currentPosition=0;
+  saveQueue();
   renderQueue();
+  renderPlayer();
+}
+
+function openEdit(index){
+  let edits=getEdits();
+  if(!edits[index]) return;
+  edits[index].views++;
+  localStorage.setItem(STORAGE, JSON.stringify(edits));
+  window.location.href=edits[index].url;
+}
+
+function openCurrent(){
+  if(!currentQueue.length){alert("Generate a queue first.");return;}
+  openEdit(currentQueue[currentPosition]);
+}
+
+function nextEdit(){
+  if(!currentQueue.length)return;
+  if(currentPosition < currentQueue.length-1){
+    currentPosition++;
+    saveQueue();
+    renderPlayer();
+  } else {
+    alert("End of queue.");
+  }
+}
+
+function previousEdit(){
+  if(!currentQueue.length)return;
+  if(currentPosition > 0){
+    currentPosition--;
+    saveQueue();
+    renderPlayer();
+  }
+}
+
+function renderPlayer(){
+  const edits=getEdits();
+  const box=document.getElementById("playerBox");
+
+  if(!currentQueue.length){
+    box.innerHTML="<p class='subtitle'>Generate a queue, then start binging.</p>";
+    return;
+  }
+
+  const editIndex=currentQueue[currentPosition];
+  const e=edits[editIndex];
+
+  if(!e){
+    box.innerHTML="<p class='subtitle'>This queue is outdated. Generate a new one.</p>";
+    return;
+  }
+
+  box.innerHTML=`
+    <div class="bigNumber">${currentPosition+1} / ${currentQueue.length}</div>
+    <div class="item">
+      <div class="meta">
+        ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
+        ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
+        ${e.fandom ? `<span class="badge">📺 ${e.fandom}</span>` : ""}
+        ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
+        ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
+        <br><br>
+        ${e.note ? `✍️ ${e.note}<br>` : ""}
+        Viewed: ${e.views}
+      </div>
+
+      <button class="shuffle" onclick="openCurrent()">Open Current Edit</button>
+
+      <div class="row">
+        <button class="secondary" onclick="previousEdit()">Previous</button>
+        <button class="secondary" onclick="nextEdit()">Next</button>
+      </div>
+
+      <button class="secondary" onclick="nextEdit(); openCurrent();">Next + Open</button>
+    </div>
+  `;
 }
 
 function renderQueue(){
@@ -265,40 +251,26 @@ function renderQueue(){
     return;
   }
 
-  let html="";
-
-  currentQueue.forEach((editIndex,position)=>{
+  box.innerHTML=currentQueue.map((editIndex,position)=>{
     const e=edits[editIndex];
-
-    html+=`
+    if(!e)return "";
+    return `
       <div class="item">
         <strong>#${position+1}</strong>
-
         <div class="meta">
           ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
           ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
           ${e.fandom ? `<span class="badge">📺 ${e.fandom}</span>` : ""}
           ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
-          ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
-
-          <br><br>
-          ${e.note ? `✍️ ${e.note}<br>` : ""}
-          Viewed: ${e.views}
         </div>
-
-        <button class="shuffle smallBtn" onclick="openEdit(${editIndex})">Open This Edit</button>
-      </div>
-    `;
-  });
-
-  box.innerHTML=html;
+      </div>`;
+  }).join("");
 }
 
 function toggleFavorite(index){
   let edits=getEdits();
   edits[index].favorite=!edits[index].favorite;
   saveEdits(edits);
-  renderQueue();
 }
 
 function deleteEdit(index){
@@ -306,7 +278,8 @@ function deleteEdit(index){
   edits.splice(index,1);
   saveEdits(edits);
   currentQueue=[];
-  renderQueue();
+  currentPosition=0;
+  saveQueue();
 }
 
 function renderLibrary(){
@@ -316,62 +289,42 @@ function renderLibrary(){
   document.getElementById("count").textContent=edits.length+" edits";
   document.getElementById("favCount").textContent=edits.filter(e=>e.favorite).length+" favorites";
 
-  const filtered=edits
-    .map((e,i)=>({e,i}))
-    .filter(({e})=>
-      e.url.toLowerCase().includes(query) ||
-      e.artist.toLowerCase().includes(query) ||
-      e.song.toLowerCase().includes(query) ||
-      e.fandom.toLowerCase().includes(query) ||
-      e.mood.toLowerCase().includes(query) ||
-      e.note.toLowerCase().includes(query)
-    );
+  const filtered=edits.map((e,i)=>({e,i})).filter(({e})=>
+    e.url.toLowerCase().includes(query) ||
+    e.artist.toLowerCase().includes(query) ||
+    e.song.toLowerCase().includes(query) ||
+    e.fandom.toLowerCase().includes(query) ||
+    e.mood.toLowerCase().includes(query) ||
+    e.note.toLowerCase().includes(query)
+  );
 
-  let html="";
-
-  if(!filtered.length){
-    html="<p class='subtitle'>No edits saved here yet.</p>";
-  }
-
-  filtered.forEach(({e,i})=>{
-    html+=`
-      <div class="item">
-        <a href="${e.url}" target="_blank">${e.url}</a>
-
-        <div class="meta">
-          ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
-          ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
-          ${e.fandom ? `<span class="badge">📺 ${e.fandom}</span>` : ""}
-          ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
-          ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
-
-          <br><br>
-          ${e.note ? `✍️ ${e.note}<br>` : ""}
-          Added: ${e.added} · Viewed: ${e.views}
-        </div>
-
-        <div class="row">
-          <button class="secondary smallBtn" onclick="openEdit(${i})">Open</button>
-          <button class="secondary smallBtn" onclick="toggleFavorite(${i})">
-            ${e.favorite ? "★ Unfavorite" : "☆ Favorite"}
-          </button>
-        </div>
-
-        <button class="delete smallBtn" onclick="deleteEdit(${i})">Delete</button>
+  document.getElementById("library").innerHTML=filtered.length ? filtered.map(({e,i})=>`
+    <div class="item">
+      <a href="${e.url}" target="_blank">${e.url}</a>
+      <div class="meta">
+        ${e.artist ? `<span class="badge">🎵 ${e.artist}</span>` : ""}
+        ${e.song ? `<span class="badge">🎧 ${e.song}</span>` : ""}
+        ${e.fandom ? `<span class="badge">📺 ${e.fandom}</span>` : ""}
+        ${e.mood ? `<span class="badge">🌙 ${e.mood}</span>` : ""}
+        ${e.favorite ? `<span class="badge">⭐ Favorite</span>` : ""}
+        <br><br>
+        ${e.note ? `✍️ ${e.note}<br>` : ""}
+        Added: ${e.added} · Viewed: ${e.views}
       </div>
-    `;
-  });
-
-  document.getElementById("library").innerHTML=html;
+      <div class="row">
+        <button class="secondary smallBtn" onclick="openEdit(${i})">Open</button>
+        <button class="secondary smallBtn" onclick="toggleFavorite(${i})">${e.favorite ? "★ Unfavorite" : "☆ Favorite"}</button>
+      </div>
+      <button class="delete smallBtn" onclick="deleteEdit(${i})">Delete</button>
+    </div>
+  `).join("") : "<p class='subtitle'>No edits saved here yet.</p>";
 }
 
 function handleIncomingLink(){
-  const params = new URLSearchParams(window.location.search);
-  const incoming = params.get("add");
-
+  const params=new URLSearchParams(window.location.search);
+  const incoming=params.get("add");
   if(incoming){
-    const decoded = decodeURIComponent(incoming);
-    document.getElementById("url").value = decoded;
+    document.getElementById("url").value=decodeURIComponent(incoming);
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
@@ -379,7 +332,7 @@ function handleIncomingLink(){
 handleIncomingLink();
 renderLibrary();
 renderQueue();
+renderPlayer();
 </script>
-
 </body>
 </html>
